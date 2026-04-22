@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TreeTrace — Geo-Spatial Tree Inventory System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── RESET & BASE ─────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green-950:#0a1f0f;
+  --green-900:#0d2b14;
+  --green-800:#1a4a26;
+  --green-700:#235e31;
+  --green-600:#2d7a40;
+  --green-500:#38a053;
+  --green-400:#52c46e;
+  --green-300:#80d99a;
+  --green-200:#b3edc4;
+  --green-100:#dff6e6;
+  --green-50:#f2fbf5;
+  --earth-800:#3d2b1a;
+  --earth-600:#6b4c2e;
+  --earth-300:#c4a882;
+  --earth-100:#f5ede0;
+  --white:#ffffff;
+  --off-white:#fafcf8;
+  --text-dark:#0f1f13;
+  --text-mid:#3a5240;
+  --text-light:#7a9982;
+  --serif:'DM Serif Display',Georgia,serif;
+  --sans:'DM Sans',system-ui,sans-serif;
+  --nav-h:68px;
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:var(--sans);background:var(--off-white);color:var(--text-dark);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+img{display:block;max-width:100%}
+a{text-decoration:none;color:inherit}
+
+/* ── SCROLLBAR ────────────────────────────────────────────────────────── */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--green-50)}
+::-webkit-scrollbar-thumb{background:var(--green-400);border-radius:3px}
+
+/* ── UTILITY ──────────────────────────────────────────────────────────── */
+.container{max-width:1160px;margin:0 auto;padding:0 32px}
+.section-label{font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--green-500);margin-bottom:16px}
+.reveal{opacity:0;transform:translateY(32px);transition:opacity .8s cubic-bezier(.22,1,.36,1),transform .8s cubic-bezier(.22,1,.36,1)}
+.reveal.visible{opacity:1;transform:none}
+.reveal-left{opacity:0;transform:translateX(-32px);transition:opacity .8s cubic-bezier(.22,1,.36,1),transform .8s cubic-bezier(.22,1,.36,1)}
+.reveal-left.visible{opacity:1;transform:none}
+.reveal-right{opacity:0;transform:translateX(32px);transition:opacity .8s cubic-bezier(.22,1,.36,1),transform .8s cubic-bezier(.22,1,.36,1)}
+.reveal-right.visible{opacity:1;transform:none}
+
+/* ── NAVBAR ───────────────────────────────────────────────────────────── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;height:var(--nav-h);display:flex;align-items:center;transition:background .4s,box-shadow .4s}
+nav.scrolled{background:rgba(250,252,248,.92);backdrop-filter:blur(12px);box-shadow:0 1px 0 rgba(56,160,83,.12)}
+nav .nav-inner{display:flex;align-items:center;justify-content:space-between;width:100%}
+.nav-logo{display:flex;align-items:center;gap:10px;font-family:var(--serif);font-size:20px;color:var(--white);transition:color .4s}
+nav.scrolled .nav-logo{color:var(--green-800)}
+.nav-logo svg{width:28px;height:28px;transition:fill .4s}
+.nav-links{display:flex;gap:32px;font-size:14px;font-weight:500;color:rgba(255,255,255,.8);transition:color .4s}
+nav.scrolled .nav-links{color:var(--text-mid)}
+.nav-links a{transition:color .2s}
+.nav-links a:hover{color:var(--green-400)}
+nav.scrolled .nav-links a:hover{color:var(--green-600)}
+.nav-cta{font-size:13px;font-weight:600;padding:9px 22px;border-radius:100px;background:rgba(255,255,255,.15);color:var(--white);border:1px solid rgba(255,255,255,.3);backdrop-filter:blur(8px);transition:all .2s;cursor:pointer}
+nav.scrolled .nav-cta{background:var(--green-600);color:var(--white);border-color:transparent}
+.nav-cta:hover{background:rgba(255,255,255,.25)}
+nav.scrolled .nav-cta:hover{background:var(--green-700)}
+
+/* ── HERO ─────────────────────────────────────────────────────────────── */
+#hero{
+  min-height:100vh;
+  display:flex;align-items:center;
+  position:relative;
+  background:var(--green-950);
+  overflow:hidden;
+}
+.hero-bg{position:absolute;inset:0;z-index:0}
+/* SVG map grid lines */
+.hero-grid{position:absolute;inset:0;background-image:
+  linear-gradient(rgba(56,160,83,.08) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(56,160,83,.08) 1px,transparent 1px);
+  background-size:64px 64px}
+/* Radial glow */
+.hero-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:900px;height:700px;background:radial-gradient(ellipse at center,rgba(45,122,64,.45) 0%,transparent 70%);pointer-events:none}
+/* Floating leaf SVGs */
+.leaf{position:absolute;opacity:.07;pointer-events:none}
+.leaf-1{top:8%;right:12%;width:320px;transform:rotate(20deg)}
+.leaf-2{bottom:10%;left:5%;width:220px;transform:rotate(-30deg)}
+.leaf-3{top:60%;right:3%;width:140px;transform:rotate(60deg)}
+/* Contour lines */
+.hero-contour{position:absolute;inset:0;overflow:hidden;opacity:.06}
+.hero-contour circle{fill:none;stroke:var(--green-400);stroke-width:1}
+
+.hero-content{position:relative;z-index:1;max-width:720px}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--green-300);margin-bottom:32px;opacity:0;animation:fadeUp .8s .3s cubic-bezier(.22,1,.36,1) forwards}
+.hero-eyebrow span.dot{width:6px;height:6px;border-radius:50%;background:var(--green-400);animation:blink 1.8s infinite}
+h1.hero-title{font-family:var(--serif);font-size:clamp(60px,9vw,110px);line-height:.95;color:var(--white);margin-bottom:24px;opacity:0;animation:fadeUp .9s .5s cubic-bezier(.22,1,.36,1) forwards;letter-spacing:-2px}
+h1.hero-title em{font-style:italic;color:var(--green-400)}
+.hero-sub{font-size:clamp(17px,2vw,20px);color:rgba(255,255,255,.65);max-width:520px;line-height:1.65;margin-bottom:16px;font-weight:300;opacity:0;animation:fadeUp .9s .65s cubic-bezier(.22,1,.36,1) forwards}
+.hero-tagline{font-family:var(--serif);font-style:italic;font-size:22px;color:var(--green-300);margin-bottom:48px;opacity:0;animation:fadeUp .9s .75s cubic-bezier(.22,1,.36,1) forwards}
+.hero-btns{display:flex;gap:16px;flex-wrap:wrap;opacity:0;animation:fadeUp .9s .9s cubic-bezier(.22,1,.36,1) forwards}
+.btn-hero{display:inline-flex;align-items:center;gap:10px;padding:16px 36px;border-radius:100px;font-size:15px;font-weight:600;cursor:pointer;transition:all .25s;border:none}
+.btn-hero-primary{background:var(--green-500);color:var(--white);box-shadow:0 0 0 0 rgba(56,160,83,.4)}
+.btn-hero-primary:hover{background:var(--green-400);box-shadow:0 0 0 12px rgba(56,160,83,.0),0 8px 32px rgba(56,160,83,.35);transform:translateY(-2px)}
+.btn-hero-ghost{background:transparent;color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.25)}
+.btn-hero-ghost:hover{background:rgba(255,255,255,.08);color:var(--white)}
+/* Scroll hint */
+.scroll-hint{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px;font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.35);text-transform:uppercase;opacity:0;animation:fadeUp .9s 1.4s cubic-bezier(.22,1,.36,1) forwards}
+.scroll-line{width:1px;height:40px;background:linear-gradient(to bottom,rgba(255,255,255,.4),transparent);animation:scrollDrop 1.5s infinite}
+
+/* ── PROBLEM ──────────────────────────────────────────────────────────── */
+#problem{padding:120px 0;background:var(--white)}
+.problem-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}
+.problem-text h2{font-family:var(--serif);font-size:clamp(36px,5vw,54px);line-height:1.1;color:var(--text-dark);margin-bottom:24px}
+.problem-text p{font-size:17px;line-height:1.75;color:var(--text-mid);font-weight:300}
+.problem-stats{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:40px}
+.stat-card{padding:24px;border-radius:16px;background:var(--green-50);border:1px solid var(--green-100)}
+.stat-num{font-family:var(--serif);font-size:40px;color:var(--green-700);line-height:1}
+.stat-label{font-size:13px;color:var(--text-light);margin-top:6px;font-weight:500}
+.problem-visual{position:relative}
+.problem-chart{background:var(--green-50);border-radius:24px;padding:32px;border:1px solid var(--green-100);overflow:hidden}
+.chart-title{font-size:13px;font-weight:600;color:var(--text-light);margin-bottom:24px;text-transform:uppercase;letter-spacing:1px}
+.bar-row{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.bar-label{font-size:13px;color:var(--text-mid);width:80px;flex-shrink:0;font-weight:500}
+.bar-track{flex:1;height:10px;border-radius:100px;background:var(--green-100);overflow:hidden}
+.bar-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--green-600),var(--green-400));transform-origin:left;transform:scaleX(0);transition:transform 1.2s cubic-bezier(.22,1,.36,1)}
+.bar-fill.animated{transform:scaleX(1)}
+.bar-pct{font-size:13px;font-weight:600;color:var(--green-700);width:36px;text-align:right}
+.problem-icons{display:flex;gap:16px;margin-top:24px}
+.prob-icon-card{flex:1;padding:20px 16px;background:var(--white);border-radius:16px;text-align:center;border:1px solid var(--green-100)}
+.prob-icon-card .ico{font-size:28px;margin-bottom:10px}
+.prob-icon-card p{font-size:12px;color:var(--text-light);font-weight:500;line-height:1.4}
+
+/* ── SOLUTION ─────────────────────────────────────────────────────────── */
+#solution{padding:120px 0;background:var(--green-950);position:relative;overflow:hidden}
+.solution-bg-glow{position:absolute;top:0;right:-200px;width:700px;height:700px;background:radial-gradient(ellipse,rgba(56,160,83,.18) 0%,transparent 70%);pointer-events:none}
+#solution .section-label{color:var(--green-400)}
+#solution h2{font-family:var(--serif);font-size:clamp(36px,5vw,54px);color:var(--white);margin-bottom:16px;line-height:1.1}
+#solution .lead{font-size:18px;color:rgba(255,255,255,.5);font-weight:300;max-width:480px;margin-bottom:64px;line-height:1.7}
+.features-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px}
+.feat-card{padding:36px;border-radius:20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);transition:all .3s;cursor:default;position:relative;overflow:hidden}
+.feat-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(56,160,83,.08),transparent);opacity:0;transition:opacity .3s}
+.feat-card:hover{background:rgba(255,255,255,.07);border-color:rgba(56,160,83,.3);transform:translateY(-4px)}
+.feat-card:hover::before{opacity:1}
+.feat-icon{width:52px;height:52px;border-radius:14px;background:rgba(56,160,83,.15);display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:20px;border:1px solid rgba(56,160,83,.2)}
+.feat-card h3{font-size:18px;font-weight:600;color:var(--white);margin-bottom:10px}
+.feat-card p{font-size:14px;color:rgba(255,255,255,.45);line-height:1.65;font-weight:300}
+.feat-num{position:absolute;top:28px;right:28px;font-family:var(--serif);font-size:48px;color:rgba(255,255,255,.04);line-height:1}
+
+/* ── HOW IT WORKS ─────────────────────────────────────────────────────── */
+#flow{padding:120px 0;background:var(--off-white)}
+#flow h2{font-family:var(--serif);font-size:clamp(36px,5vw,54px);color:var(--text-dark);margin-bottom:16px;line-height:1.1}
+#flow .lead{font-size:17px;color:var(--text-light);font-weight:300;max-width:480px;margin-bottom:72px;line-height:1.7}
+.flow-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;position:relative}
+.flow-steps::before{content:'';position:absolute;top:36px;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,var(--green-300),var(--green-400),var(--green-300),transparent)}
+.step{display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 12px;position:relative}
+.step-bubble{width:72px;height:72px;border-radius:50%;background:var(--white);border:2px solid var(--green-200);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:22px;margin-bottom:20px;position:relative;z-index:1;transition:all .4s;box-shadow:0 4px 20px rgba(0,0,0,.06)}
+.step:hover .step-bubble{background:var(--green-600);border-color:var(--green-600);transform:scale(1.1);box-shadow:0 8px 32px rgba(56,160,83,.3)}
+.step:hover .step-bubble span{filter:brightness(0) invert(1)}
+.step-num{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--green-500);color:var(--white);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.step h4{font-size:14px;font-weight:600;color:var(--text-dark);margin-bottom:6px}
+.step p{font-size:12px;color:var(--text-light);line-height:1.5}
+/* second row */
+.flow-steps-2{margin-top:48px;grid-template-columns:repeat(4,1fr)}
+.flow-steps-2::before{top:36px;left:10%;right:10%;background:linear-gradient(90deg,transparent,var(--green-300),var(--green-400),var(--green-300),transparent)}
+
+/* ── ADVANCED FEATURES ────────────────────────────────────────────────── */
+#advanced{padding:120px 0;background:var(--white)}
+.adv-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:40px;margin-top:64px}
+.adv-card{display:flex;gap:24px;padding:32px;border-radius:20px;border:1px solid var(--green-100);background:var(--green-50);transition:all .3s;align-items:flex-start}
+.adv-card:hover{border-color:var(--green-300);box-shadow:0 12px 48px rgba(56,160,83,.1);transform:translateY(-3px)}
+.adv-icon-wrap{width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,var(--green-600),var(--green-500));display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;box-shadow:0 4px 16px rgba(56,160,83,.25)}
+.adv-text h3{font-size:17px;font-weight:600;color:var(--text-dark);margin-bottom:8px}
+.adv-text p{font-size:14px;color:var(--text-light);line-height:1.6;font-weight:300}
+.adv-badge{display:inline-flex;margin-top:10px;font-size:11px;font-weight:600;letter-spacing:.5px;padding:4px 12px;border-radius:100px;background:var(--green-200);color:var(--green-800)}
+
+/* ── BENEFITS ─────────────────────────────────────────────────────────── */
+#benefits{padding:120px 0;background:linear-gradient(160deg,var(--green-900) 0%,var(--green-950) 60%,var(--earth-800) 100%);position:relative;overflow:hidden}
+.benefits-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(56,160,83,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(56,160,83,.05) 1px,transparent 1px);background-size:80px 80px}
+#benefits .section-label{color:var(--green-400)}
+#benefits h2{font-family:var(--serif);font-size:clamp(36px,5vw,54px);color:var(--white);margin-bottom:16px}
+#benefits .lead{font-size:17px;color:rgba(255,255,255,.5);font-weight:300;max-width:500px;margin-bottom:64px;line-height:1.7}
+.benefits-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+.benefit-card{padding:36px 28px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);text-align:center;transition:all .3s}
+.benefit-card:hover{background:rgba(255,255,255,.09);transform:translateY(-6px);border-color:rgba(56,160,83,.3)}
+.benefit-icon{font-size:36px;margin-bottom:20px}
+.benefit-card h3{font-size:16px;font-weight:600;color:var(--white);margin-bottom:10px}
+.benefit-card p{font-size:13px;color:rgba(255,255,255,.45);line-height:1.6;font-weight:300}
+
+/* ── CTA ──────────────────────────────────────────────────────────────── */
+#cta{padding:160px 0;background:var(--off-white);text-align:center;position:relative;overflow:hidden}
+.cta-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:800px;height:500px;background:radial-gradient(ellipse,rgba(56,160,83,.12) 0%,transparent 70%);pointer-events:none}
+.cta-content{position:relative;z-index:1}
+#cta h2{font-family:var(--serif);font-size:clamp(36px,6vw,68px);color:var(--text-dark);line-height:1.05;margin-bottom:28px;max-width:760px;margin-left:auto;margin-right:auto}
+#cta h2 em{font-style:italic;color:var(--green-600)}
+#cta p{font-size:18px;color:var(--text-light);font-weight:300;max-width:500px;margin:0 auto 48px;line-height:1.7}
+.cta-btns{display:flex;justify-content:center;gap:16px;flex-wrap:wrap}
+.btn-cta{display:inline-flex;align-items:center;gap:10px;padding:18px 40px;border-radius:100px;font-size:15px;font-weight:600;cursor:pointer;transition:all .25s;border:none}
+.btn-cta-primary{background:linear-gradient(135deg,var(--green-600),var(--green-500));color:var(--white);box-shadow:0 4px 32px rgba(56,160,83,.3)}
+.btn-cta-primary:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(56,160,83,.35)}
+.btn-cta-outline{background:transparent;color:var(--green-700);border:1.5px solid var(--green-300)}
+.btn-cta-outline:hover{background:var(--green-50);border-color:var(--green-400)}
+
+/* ── FOOTER ───────────────────────────────────────────────────────────── */
+footer{background:var(--green-950);padding:40px 0;text-align:center}
+.footer-logo{display:inline-flex;align-items:center;gap:10px;font-family:var(--serif);font-size:18px;color:var(--white);margin-bottom:12px}
+footer p{font-size:13px;color:rgba(255,255,255,.3)}
+
+/* ── ANIMATIONS ───────────────────────────────────────────────────────── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes scrollDrop{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform:scaleY(1);transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+
+/* ── RESPONSIVE ───────────────────────────────────────────────────────── */
+@media(max-width:900px){
+  .problem-grid{grid-template-columns:1fr}
+  .features-grid{grid-template-columns:1fr}
+  .flow-steps,.flow-steps-2{grid-template-columns:repeat(2,1fr);gap:32px}
+  .flow-steps::before,.flow-steps-2::before{display:none}
+  .adv-grid{grid-template-columns:1fr}
+  .benefits-grid{grid-template-columns:repeat(2,1fr)}
+  nav .nav-links{display:none}
+}
+@media(max-width:600px){
+  .container{padding:0 20px}
+  .benefits-grid{grid-template-columns:1fr}
+  .problem-stats{grid-template-columns:1fr}
+  h1.hero-title{font-size:52px}
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ──────────────────────────────────────────────────────────────── -->
+<nav id="navbar">
+  <div class="container nav-inner">
+    <a href="#hero" class="nav-logo">
+      <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M14 3C14 3 8 9 8 15a6 6 0 0012 0C20 9 14 3 14 3z" fill="rgba(80,200,110,.9)"/>
+        <path d="M14 15v9M11 20l3 2 3-2" stroke="rgba(80,200,110,.7)" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="14" cy="24" r="2" fill="rgba(80,200,110,.4)"/>
+      </svg>
+      TreeTrace
+    </a>
+    <div class="nav-links">
+      <a href="#problem">The Challenge</a>
+      <a href="#solution">Solution</a>
+      <a href="#flow">How It Works</a>
+      <a href="#advanced">Features</a>
+    </div>
+    <a href="#cta" class="nav-cta">Learn More</a>
+  </div>
+</nav>
+
+<!-- ── HERO ─────────────────────────────────────────────────────────────── -->
+<section id="hero">
+  <div class="hero-bg">
+    <div class="hero-grid"></div>
+    <div class="hero-glow"></div>
+    <!-- contour rings -->
+    <svg class="hero-contour" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="1100" cy="200" r="120"/>
+      <circle cx="1100" cy="200" r="200"/>
+      <circle cx="1100" cy="200" r="300"/>
+      <circle cx="1100" cy="200" r="420"/>
+      <circle cx="1100" cy="200" r="560"/>
+      <circle cx="220" cy="700" r="80"/>
+      <circle cx="220" cy="700" r="160"/>
+      <circle cx="220" cy="700" r="260"/>
+    </svg>
+    <!-- decorative leaf shapes -->
+    <svg class="leaf leaf-1" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+      <path d="M100 10 C60 60 20 120 30 180 C40 240 80 280 100 290 C120 280 160 240 170 180 C180 120 140 60 100 10Z" fill="#52c46e"/>
+      <path d="M100 10 L100 290" stroke="#38a053" stroke-width="2"/>
+      <path d="M100 80 C80 90 60 100 45 120" stroke="#38a053" stroke-width="1.5"/>
+      <path d="M100 130 C80 140 65 150 55 170" stroke="#38a053" stroke-width="1.5"/>
+      <path d="M100 80 C120 90 140 100 155 120" stroke="#38a053" stroke-width="1.5"/>
+      <path d="M100 130 C120 140 135 150 145 170" stroke="#38a053" stroke-width="1.5"/>
+    </svg>
+    <svg class="leaf leaf-2" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+      <path d="M100 10 C60 60 20 120 30 180 C40 240 80 280 100 290 C120 280 160 240 170 180 C180 120 140 60 100 10Z" fill="#52c46e"/>
+      <path d="M100 10 L100 290" stroke="#38a053" stroke-width="2"/>
+    </svg>
+    <svg class="leaf leaf-3" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+      <path d="M100 10 C60 60 20 120 30 180 C40 240 80 280 100 290 C120 280 160 240 170 180 C180 120 140 60 100 10Z" fill="#52c46e"/>
+    </svg>
+  </div>
+
+  <div class="container">
+    <div class="hero-content">
+      <h1 class="hero-title">Tree<em>Trace</em></h1>
+      <p class="hero-sub">Smart Tree Monitoring for Sustainable Communities</p>
+      <p class="hero-tagline">"Track. Scan. Sustain."</p>
+      <div class="hero-btns">
+        <a href="#solution" class="btn-hero btn-hero-primary">
+          Explore System
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#flow" class="btn-hero btn-hero-ghost">See How It Works</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll-hint">
+    <div class="scroll-line"></div>
+    Scroll
+  </div>
+</section>
+
+<!-- ── PROBLEM ───────────────────────────────────────────────────────────── -->
+<section id="problem">
+  <div class="container">
+    <div class="problem-grid">
+      <div class="problem-text reveal-left">
+        <p class="section-label">The Challenge</p>
+        <h2>Urban trees are invisible to city governments</h2>
+        <p>Local Government Units rely on manual tree inventory methods — clipboards, spreadsheets, and site visits — resulting in outdated records, inaccurate data, and inefficient monitoring across entire cities.</p>
+        <div class="problem-stats">
+          <div class="stat-card">
+            <div class="stat-num">70%</div>
+            <div class="stat-label">of LGUs have no digital tree records</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">3×</div>
+            <div class="stat-label">slower response to at-risk trees</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">40%</div>
+            <div class="stat-label">data inaccuracy in manual surveys</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">0</div>
+            <div class="stat-label">real-time visibility without a system</div>
+          </div>
+        </div>
+      </div>
+      <div class="problem-visual reveal-right">
+        <div class="problem-chart">
+          <p class="chart-title">Monitoring efficiency comparison</p>
+          <div class="bar-row">
+            <span class="bar-label">TreeTrace</span>
+            <div class="bar-track"><div class="bar-fill" data-w=".94" style="width:94%"></div></div>
+            <span class="bar-pct">94%</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">Hybrid</span>
+            <div class="bar-track"><div class="bar-fill" data-w=".58" style="width:58%"></div></div>
+            <span class="bar-pct">58%</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">Spreadsheet</span>
+            <div class="bar-track"><div class="bar-fill" data-w=".31" style="width:31%"></div></div>
+            <span class="bar-pct">31%</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">Manual</span>
+            <div class="bar-track"><div class="bar-fill" data-w=".12" style="width:12%"></div></div>
+            <span class="bar-pct">12%</span>
+          </div>
+        </div>
+        <div class="problem-icons">
+          <div class="prob-icon-card">
+            <div class="ico">📋</div>
+            <p>Manual logs</p>
+          </div>
+          <div class="prob-icon-card">
+            <div class="ico">⏳</div>
+            <p>Slow updates</p>
+          </div>
+          <div class="prob-icon-card">
+            <div class="ico">❌</div>
+            <p>Data gaps</p>
+          </div>
+          <div class="prob-icon-card">
+            <div class="ico">🗺️</div>
+            <p>No geo-data</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SOLUTION ──────────────────────────────────────────────────────────── -->
+<section id="solution">
+  <div class="solution-bg-glow"></div>
+  <div class="container">
+    <p class="section-label reveal">The Solution</p>
+    <h2 class="reveal">One platform for your<br>entire tree network</h2>
+    <p class="lead reveal">TreeTrace brings GPS precision, mobile scanning, and real-time data into a single, easy-to-use system built for LGUs.</p>
+    <div class="features-grid">
+      <div class="feat-card reveal" style="transition-delay:.1s">
+        <div class="feat-num">01</div>
+        <div class="feat-icon">🗺️</div>
+        <h3>GPS Tree Mapping</h3>
+        <p>Precisely tag every tree with GPS coordinates. View your entire urban forest on an interactive geospatial map.</p>
+      </div>
+      <div class="feat-card reveal" style="transition-delay:.2s">
+        <div class="feat-num">02</div>
+        <div class="feat-icon">🔳</div>
+        <h3>QR Code Tagging</h3>
+        <p>Each tree gets a unique QR code. Field workers scan to instantly retrieve and update full records on the spot.</p>
+      </div>
+      <div class="feat-card reveal" style="transition-delay:.3s">
+        <div class="feat-num">03</div>
+        <div class="feat-icon">📱</div>
+        <h3>Web & Mobile Access</h3>
+        <p>Fully responsive web dashboard plus a native mobile app for field use. Access everything from any device.</p>
+      </div>
+      <div class="feat-card reveal" style="transition-delay:.4s">
+        <div class="feat-num">04</div>
+        <div class="feat-icon">📡</div>
+        <h3>Real-Time Monitoring</h3>
+        <p>Live status updates, automated health alerts, and instant sync between field teams and LGU administrators.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ──────────────────────────────────────────────────────── -->
+<section id="flow">
+  <div class="container">
+    <p class="section-label reveal">System Flow</p>
+    <h2 class="reveal">How It Works</h2>
+    <p class="lead reveal">Eight intelligent steps from tree discovery to synchronized city database.</p>
+
+    <div class="flow-steps">
+      <div class="step reveal" style="transition-delay:.05s">
+        <div class="step-bubble"><span>📷</span><div class="step-num">1</div></div>
+        <h4>Capture</h4>
+        <p>Take a photo of the tree in the field</p>
+      </div>
+      <div class="step reveal" style="transition-delay:.15s">
+        <div class="step-bubble"><span>🔍</span><div class="step-num">2</div></div>
+        <h4>Detect</h4>
+        <p>AI model detects species & condition</p>
+      </div>
+      <div class="step reveal" style="transition-delay:.25s">
+        <div class="step-bubble"><span>🌿</span><div class="step-num">3</div></div>
+        <h4>Identify</h4>
+        <p>Tree classified with confidence score</p>
+      </div>
+      <div class="step reveal" style="transition-delay:.35s">
+        <div class="step-bubble"><span>💚</span><div class="step-num">4</div></div>
+        <h4>Check Status</h4>
+        <p>Health, risk level & flags reviewed</p>
+      </div>
+    </div>
+
+    <div class="flow-steps flow-steps-2" style="margin-top:48px">
+      <div class="step reveal" style="transition-delay:.1s">
+        <div class="step-bubble"><span>📊</span><div class="step-num">5</div></div>
+        <h4>Display Info</h4>
+        <p>Full tree profile shown in dashboard</p>
+      </div>
+      <div class="step reveal" style="transition-delay:.2s">
+        <div class="step-bubble"><span>✏️</span><div class="step-num">6</div></div>
+        <h4>Add Data</h4>
+        <p>Enrich record with notes & photos</p>
+      </div>
+      <div class="step reveal" style="transition-delay:.3s">
+        <div class="step-bubble"><span>💾</span><div class="step-num">7</div></div>
+        <h4>Save Offline</h4>
+        <p>Works with no internet connection</p>
+      </div>
+      <div class="step reveal" style="transition-delay:.4s">
+        <div class="step-bubble"><span>☁️</span><div class="step-num">8</div></div>
+        <h4>Sync</h4>
+        <p>Auto-syncs to central database</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── ADVANCED FEATURES ─────────────────────────────────────────────────── -->
+<section id="advanced">
+  <div class="container">
+    <p class="section-label reveal">Advanced Features</p>
+    <h2 style="font-family:var(--serif);font-size:clamp(36px,5vw,54px);color:var(--text-dark);margin-bottom:16px;line-height:1.1" class="reveal">Intelligence built in</h2>
+    <p style="font-size:17px;color:var(--text-light);font-weight:300;max-width:480px;margin-bottom:0;line-height:1.7" class="reveal">TreeTrace goes beyond basic inventory with smart tools designed for modern urban forestry.</p>
+    <div class="adv-grid">
+      <div class="adv-card reveal" style="transition-delay:.1s">
+        <div class="adv-icon-wrap">🪴</div>
+        <div class="adv-text">
+          <h3>Image-Based Tree Identification</h3>
+          <p>Powered by a trained machine learning model, field officers simply photograph a tree and receive instant species identification with confidence levels.</p>
+          <span class="adv-badge">AI-powered</span>
+        </div>
+      </div>
+      <div class="adv-card reveal" style="transition-delay:.2s">
+        <div class="adv-icon-wrap">⚠️</div>
+        <div class="adv-text">
+          <h3>Endangered Species Detection</h3>
+          <p>Automatically flags trees that belong to endangered or protected species, alerting the LGU and triggering the correct legal workflows.</p>
+          <span class="adv-badge">Conservation</span>
+        </div>
+      </div>
+      <div class="adv-card reveal" style="transition-delay:.3s">
+        <div class="adv-icon-wrap">📈</div>
+        <div class="adv-text">
+          <h3>Community Tree Analysis</h3>
+          <p>Visualize urban tree coverage across barangays. Identify gaps, track canopy growth, and support evidence-based environmental planning decisions.</p>
+          <span class="adv-badge">Analytics</span>
+        </div>
+      </div>
+      <div class="adv-card reveal" style="transition-delay:.4s">
+        <div class="adv-icon-wrap">📶</div>
+        <div class="adv-text">
+          <h3>Offline Data Collection & Sync</h3>
+          <p>Full functionality in areas without internet. Data is stored locally on the device and automatically synced to the central server when connectivity returns.</p>
+          <span class="adv-badge">Field-ready</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── BENEFITS ──────────────────────────────────────────────────────────── -->
+<section id="benefits">
+  <div class="benefits-bg"></div>
+  <div class="container" style="position:relative;z-index:1">
+    <p class="section-label reveal">Benefits</p>
+    <h2 class="reveal">Why TreeTrace matters</h2>
+    <p class="lead reveal">Real outcomes for LGUs, communities, and the environment.</p>
+    <div class="benefits-grid">
+      <div class="benefit-card reveal" style="transition-delay:.1s">
+        <div class="benefit-icon">⚡</div>
+        <h3>Faster Monitoring</h3>
+        <p>Reduce inspection and reporting time by up to 80% with mobile-first workflows and QR scanning.</p>
+      </div>
+      <div class="benefit-card reveal" style="transition-delay:.2s">
+        <div class="benefit-icon">🎯</div>
+        <h3>Improved Data Accuracy</h3>
+        <p>GPS-tagged, photo-verified records eliminate manual transcription errors and outdated information.</p>
+      </div>
+      <div class="benefit-card reveal" style="transition-delay:.3s">
+        <div class="benefit-icon">🏙️</div>
+        <h3>Supports Urban Planning</h3>
+        <p>Rich geospatial data empowers LGUs to make smarter decisions about green infrastructure and zoning.</p>
+      </div>
+      <div class="benefit-card reveal" style="transition-delay:.4s">
+        <div class="benefit-icon">🌍</div>
+        <h3>Promotes Sustainability</h3>
+        <p>By protecting and monitoring urban trees, TreeTrace actively contributes to climate resilience and biodiversity goals.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ───────────────────────────────────────────────────────────────── -->
+<section id="cta">
+  <div class="cta-glow"></div>
+  <div class="container">
+    <div class="cta-content reveal">
+      <h2>Start building <em>smarter</em><br>green communities</h2>
+      <p>TreeTrace gives local governments the tools to understand, protect, and grow their urban forests — one tree at a time.</p>
+      <div class="cta-btns">
+        <a href="#solution" class="btn-cta btn-cta-primary">
+          Learn More
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#flow" class="btn-cta btn-cta-outline">View System Flow</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ────────────────────────────────────────────────────────────── -->
+<footer>
+  <div class="container">
+    <div class="footer-logo">
+      <svg width="22" height="22" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M14 3C14 3 8 9 8 15a6 6 0 0012 0C20 9 14 3 14 3z" fill="rgba(80,200,110,.9)"/>
+        <path d="M14 15v9M11 20l3 2 3-2" stroke="rgba(80,200,110,.7)" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      TreeTrace
+    </div>
+    <p>A Geo-Spatial Tree Inventory System · Capstone Project 2026 · Davao City, Philippines</p>
+  </div>
+</footer>
+
+<script>
+// ── NAV scroll effect
+const navbar = document.getElementById('navbar');
+window.addEventListener('scroll', () => {
+  navbar.classList.toggle('scrolled', window.scrollY > 60);
+}, { passive: true });
+
+// ── Reveal on scroll
+const revealEls = document.querySelectorAll('.reveal, .reveal-left, .reveal-right');
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+  });
+}, { threshold: 0.12 });
+revealEls.forEach(el => io.observe(el));
+
+// ── Bar chart animate
+const barIo = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.querySelectorAll('.bar-fill').forEach((bar, i) => {
+        setTimeout(() => bar.classList.add('animated'), i * 180);
+      });
+      barIo.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.3 });
+const chart = document.querySelector('.problem-chart');
+if (chart) barIo.observe(chart);
+
+// ── Smooth scroll for anchors
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    const target = document.querySelector(a.getAttribute('href'));
+    if (target) {
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+});
+</script>
+</body>
+</html>
